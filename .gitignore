@@ -1,4 +1,5 @@
 */node_modules
 *.wasm
+game/wasm_exec.js
 .vscode
 .idea
