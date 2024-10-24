@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>Block Stacking Game</h1>
+<game-grid></game-grid>
+</body>
+
+<script src="./wasm_exec.js"></script>
+<script>
+    const go = new Go();
+    WebAssembly.instantiateStreaming(fetch("./main.wasm", { mode: "no-cors" }), go.importObject).then(async (result) => {
+        go.run(result.instance);
+    });
+</script>
+
+<style>
+    body {
+        display: block;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        background-color: #3b0903;
+    }
+    h1 {
+        text-align: center;
+        display: block;
+        width: 100%;
+        color: white;
+        padding: 1em 0;
+        font-family: Arial,sans-serif;
+    }
+    game-grid {
+        margin: auto;
+        display: block;
+        padding: 5px;
+        width: fit-content;
+        border: gray 5px solid;
+        border-radius: 10px;
+    }
+    game-row {
+        display: block;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        height: 39px;
+    }
+    game-square {
+        background-color: gray;
+        width: 35px;
+        height: 35px;
+        margin: 2px;
+        display: inline-block;
+        border-radius: 2.5px;
+    }
+</style>
+</html>
