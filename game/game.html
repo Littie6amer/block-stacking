@@ -6,7 +6,25 @@
 </head>
 <body>
 <h1>Block Stacking Game</h1>
-<game-grid></game-grid>
+<game-menu>
+    <h1>Block Stacking Game</h1>
+    <div id="main-menu">
+        <p id="status">You can use your arrow keys or WASD to control the shapes, ENTER to instantly place, press ESC to return to this menu.</p>
+        <button id="play">Play</button>
+        <button id="restart">Restart</button>
+        <button id="debug">Debug Information</button>
+        <button id="settings" disabled>Settings</button>
+        <button id="github">Source Code</button>
+    </div>
+    <div id="debug-menu" class="hide">
+        <h2>Debug Information</h2>
+        <p id="debug-info">Hi from littie :)</p>
+        <button id="logs" disabled>Debug Logs</button>
+        <button id="back">Back</button>
+    </div>
+</game-menu>
+<game-grid>
+</game-grid>
 </body>
 
 <script src="./wasm_exec.js"></script>
@@ -24,15 +42,77 @@
         padding: 0;
         width: 100%;
         background-color: #3b0903;
+        font-family: Arial,sans-serif;
     }
+
     h1 {
         text-align: center;
         display: block;
         width: 100%;
         color: white;
         padding: 1em 0;
-        font-family: Arial,sans-serif;
     }
+
+    button {
+        font-family: "Arial Black", Arial,sans-serif;
+        display: block;
+        background-color: #7f7f7f;
+        border: none;
+        border-radius: .25em;
+        padding: 1em 2em;
+        font-weight: 700;
+        font-size: medium;
+    }
+
+    button[disabled] {
+        background: #3a3a3a;
+        color: #1a1a1a
+    }
+
+    button:hover {
+        border: white 2px solid;
+    }
+
+    button:hover[disabled] {
+        border: #000 2px solid;
+    }
+
+    .hide {
+        display: none !important;
+    }
+
+    game-menu {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        background-color: #000000BB;
+    }
+
+    game-menu button {
+        width: 20em;
+        margin: auto;
+        margin-bottom: .5em;
+    }
+
+    game-menu h2 {
+        width: 100%;
+        text-align: center;
+        display: block;
+        color: white;
+    }
+
+    game-menu p {
+        display: block;
+        color: white;
+        text-align: center;
+        width: 28em;
+        margin: auto;
+        margin-bottom: 2em;
+    }
+
     game-grid {
         margin: auto;
         display: block;

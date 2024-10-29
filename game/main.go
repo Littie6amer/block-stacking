@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"syscall/js"
@@ -74,14 +75,16 @@ var game = struct {
 	CurrentPosition  [2]int
 	CurrentShapeMask [][]bool
 	CurrentShape     int
-	CurrentRotation  int
 	NextShape        int
+	Score            int
+	Paused           bool
 }{
 	NextShape: rand.Intn(7),
+	Paused:    true,
 }
 
 func main() {
-	fmt.Println("Hi")
+	fmt.Println("Hi from littie :0")
 	gameGrid := GameGrid()
 	document := Document()
 	for range 20 {
@@ -92,6 +95,13 @@ func main() {
 		}
 		gameGrid.Call("appendChild", gameRow)
 	}
+
+	QuerySelector("game-menu #play").Call("addEventListener", "click", js.FuncOf(MenuButtonHandler))
+	QuerySelector("game-menu #restart").Call("addEventListener", "click", js.FuncOf(MenuButtonHandler))
+	QuerySelector("game-menu #debug").Call("addEventListener", "click", js.FuncOf(MenuButtonHandler))
+	QuerySelector("game-menu #back").Call("addEventListener", "click", js.FuncOf(MenuButtonHandler))
+	QuerySelector("game-menu #settings").Call("addEventListener", "click", js.FuncOf(MenuButtonHandler))
+	QuerySelector("game-menu #github").Call("addEventListener", "click", js.FuncOf(MenuButtonHandler))
 
 	NextShape()
 
@@ -104,7 +114,6 @@ func main() {
 
 	go func() {
 		for {
-			FindSolvedRows()
 			RenderGrid()
 			RenderActiveShape()
 			time.Sleep(100 * time.Millisecond)
@@ -116,7 +125,7 @@ func main() {
 		MoveTick()
 	}
 
-	<-make(chan struct{})
+	//<-make(chan struct{})
 }
 
 func Document() js.Value {
@@ -131,8 +140,61 @@ func GameGrid() js.Value {
 	return QuerySelector("game-grid")
 }
 
+func MenuButtonHandler(this js.Value, args []js.Value) interface{} {
+	id := this.Get("id").String()
+	switch id {
+	case "play":
+		ToggleMenu()
+	case "restart":
+		Restart()
+	case "debug":
+		byt, err := json.Marshal(game)
+		if err != nil {
+			byt = []byte("Parse err!")
+		}
+		QuerySelector("#debug-info").Set("innerHTML", string(byt))
+		ShowMenuPage(1)
+	case "back":
+		ShowMenuPage(0)
+	case "github":
+		js.Global().Get("window").Call("open", "https://github.com/littie6amer/block-stacking")
+	}
+	return nil
+}
+
+func ToggleMenu() {
+	menu := QuerySelector("game-menu")
+	class := menu.Get("className").String()
+	if class == "hide" {
+		ShowMenuPage(0)
+		menu.Set("className", "")
+		game.Paused = true
+	} else {
+		menu.Set("className", "hide")
+		game.Paused = false
+	}
+}
+
+func ShowMenuPage(page int) {
+	mainMenu, debug := QuerySelector("game-menu #main-menu"), QuerySelector("game-menu #debug-menu")
+	switch page {
+	case 0:
+		mainMenu.Set("className", "")
+		debug.Set("className", "hide")
+	case 1:
+		mainMenu.Set("className", "hide")
+		debug.Set("className", "")
+	}
+}
+
 func keyAction(key string) {
+	if game.Paused && key != "Escape" {
+		return
+	}
+
 	switch key {
+	case "Escape":
+		ToggleMenu()
 	case "KeyA", "ArrowLeft":
 		{
 			valid := IsValidPosition([2]int{game.CurrentPosition[0] - 1, game.CurrentPosition[1]})
@@ -163,6 +225,10 @@ func keyAction(key string) {
 }
 
 func MoveTick() {
+	if game.Paused {
+		return
+	}
+
 	yPlace := YPlacePosition()
 	if yPlace == game.CurrentPosition[1]+1 {
 		PlaceShape()
@@ -219,23 +285,35 @@ func YPlacePosition() int {
 	yFloor := 21 - shapeRows
 	highRow := 0
 
-	for tryY := range 19 - game.CurrentPosition[1] /*0-19*/ {
-		actualY := 19 - tryY // 0-19
-		for r := range shapeRows {
-			for c := range shapeCols {
+	for r := range shapeRows {
+		for c := range shapeCols {
+			for actualY := game.CurrentPosition[1]; actualY < 20; actualY++ {
 				if !shape[r][c] || actualY <= game.CurrentPosition[1]+r || actualY >= yFloor || (r != shapeRows-1 && shape[r+1][c]) {
 					continue
 				}
 				if actualY == 19 || game.Grid[actualY+1][game.CurrentPosition[0]+c] != "" {
 					yFloor = (actualY + 1) //- (shapeRows - (r + 1))
 					highRow = r
+					break
 				}
 			}
 		}
 	}
 
+	//for tryY := range 19 - game.CurrentPosition[1] /*0-19*/ {
+	//	actualY := 19 - tryY // 0-19
+	//
+	//}
+
 	//return yFloor
 	return yFloor - (highRow + 1)
+}
+
+func Restart() {
+	game.Paused = true
+	game.Grid = [20][10]string{}
+	game.Score = 0
+	NextShape()
 }
 
 func PlaceShape() {
@@ -252,6 +330,7 @@ func PlaceShape() {
 			}
 		}
 	}
+	CheckRows()
 	NextShape()
 }
 
@@ -288,30 +367,33 @@ func SetSquareColor(row, col int, hexColor string) {
 	style.Set("background-color", hexColor)
 }
 
-var score = 0
-
-func FindSolvedRows() {
+func CheckRows() {
+	i := 19
+	var newGrid [20][10]string
 	for r := range 20 {
 		r = 19 - r
 		solved := true
 		for c := range 10 {
 			if game.Grid[r][c] == "" {
 				solved = false
+			} else if r == 1 {
+				QuerySelector("#status").Set("innerHTML", fmt.Sprintf("You lost :(<br>Your last score was %d", game.Score))
+				Restart()
+				ToggleMenu()
+				return
 			}
 		}
 		if solved {
-			score++
-			fmt.Println("You solved a row! Your score is now ", score)
-			for nr := range r + 1 {
-				nr = r - nr
-				if nr == 0 {
-					game.Grid[nr] = [10]string{}
-				} else {
-					game.Grid[nr] = game.Grid[nr-1]
-				}
+			game.Score++
+			for c := range 10 {
+				SetSquareColor(r, c, "#fff")
 			}
+		} else {
+			newGrid[i] = game.Grid[r]
+			i--
 		}
 	}
+	game.Grid = newGrid
 }
 
 func RenderGrid() {
